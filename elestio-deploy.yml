@@ -1,0 +1,85 @@
+# .github/workflows/deploy.yml
+
+name: 'Deploy to Elestio'
+
+on:
+    workflow_call:
+        inputs:
+            commit_message:
+                description: 'The commit message to check for skip directives'
+                required: true
+                type: string
+            packageVersion:
+                description: 'The version from package.json'
+                required: true
+                type: string
+            newTag:
+                description: 'The new version tag from the bump'
+                required: false
+                type: string
+        secrets:
+            ELESTIO_EMAIL:
+                required: true
+            ELESTIO_API_TOKEN:
+                required: true
+            ELESTIO_VM_ID:
+                required: true
+            ELESTIO_PROJECT_ID:
+                required: true
+            ELESTIO_PIPELINE_ID:
+                required: true
+
+jobs:
+    deploy:
+        name: 'Deploy to Elestio'
+        runs-on: ubuntu-latest
+        steps:
+            -   name: 'Get Elestio JWT'
+                id: get_jwt
+                run: |
+                    response=$(curl -s -X POST https://api.elest.io/api/auth/checkAPIToken \
+                      -H "Content-Type: application/json" \
+                      -d '{
+                        "email": "${{ secrets.ELESTIO_EMAIL }}",
+                        "token": "${{ secrets.ELESTIO_API_TOKEN }}"
+                      }')
+                    echo "jwt=$(echo $response | jq -r .jwt)" >> $GITHUB_OUTPUT
+
+            # -   name: Set Docker Tag
+            #     id: set_docker_tag
+            #     run: |
+            #       if [[ "${{ contains(inputs.commit_message, '#skip-docker') }}" == "true" ]]; then
+            #         echo "DOCKER_TAG=${{ inputs.packageVersion }}" >> $GITHUB_OUTPUT
+            #       else
+            #         echo "DOCKER_TAG=${{ inputs.newTag }}" >> $GITHUB_OUTPUT
+            #       fi
+
+            
+
+            # -   name: 'Update DOCKER_TAG in Elestio'
+            #     id: update_docker_tag
+            #     run: |
+            #         run: |
+            #         curl -s -X POST https://api.elest.io/api/cicd/doActionOnPipeline \
+            #           -H "Content-Type: application/json" \
+            #           -d '{
+            #             "jwt": "${{ steps.get_jwt.outputs.jwt }}",
+            #             "vmID": "${{ secrets.ELESTIO_VM_ID }}",
+            #             "projectID": "${{ secrets.ELESTIO_PROJECT_ID }}",
+            #             "pipelineID": ${{ secrets.ELESTIO_PIPELINE_ID }},
+            #             "action": "updateBuildConfig",
+            #             "buildDeployPayload": {
+            #                 "variables":" { \"DOCKER_TAG\": \"${{ steps.set_docker_tag.outputs.DOCKER_TAG }}\" }
+            #           }'
+
+            -   name: 'Trigger Elestio Pipeline Rebuild'
+                run: |
+                    curl -s -X POST https://api.elest.io/api/cicd/doActionOnPipeline \
+                      -H "Content-Type: application/json" \
+                      -d '{
+                        "jwt": "${{ steps.get_jwt.outputs.jwt }}",
+                        "vmID": "${{ secrets.ELESTIO_VM_ID }}",
+                        "projectID": "${{ secrets.ELESTIO_PROJECT_ID }}",
+                        "pipelineID": ${{ secrets.ELESTIO_PIPELINE_ID }},
+                        "action": "reSyncPipeline"
+                      }'

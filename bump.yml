@@ -1,0 +1,54 @@
+# .github/workflows/bump.yml
+
+name: 'Version Bump'
+
+on:
+    workflow_call:
+        inputs:
+            commit_message:
+                description: 'The commit message to check for skip directives'
+                required: true
+                type: string
+        outputs:
+            newTag:
+                description: "The new version tag"
+                value: ${{ jobs.bump.outputs.newTag }}
+        secrets:
+            GH_CI_CD_RELEASE:
+                required: true
+
+jobs:
+    bump:
+        name: 'Bump Version'
+        runs-on: ubuntu-latest
+        if: ${{ !contains(inputs.commit_message, '#skip-bump') }}
+        outputs:
+            newTag: ${{ steps.version.outputs.newTag }}
+        steps:
+            -   name: 'Checkout'
+                uses: actions/checkout@v4
+                with:
+                    # This is required to allow the bump action to push the new tag
+                    # and commit back to the repository.
+                    token: ${{ secrets.GH_PAT_TOKEN }}
+                    fetch-depth: 0 #
+            
+            -   name: 'Version Bump'
+               
+                id: version
+                uses: phips28/gh-action-bump-version@master
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+                with:
+                    major-wording: 'major,breaking'
+                    minor-wording: 'feature,feat'
+                    patch-wording: 'patch,fixes,fix,misc,docs,refactor'
+                    commit-message: 'Release Package: Bump Version [skip ci]'
+                    skip-tag: false
+
+            -   name: 'Show new version'
+                run: echo "New version is ${{ steps.version.outputs.newTag }}"
+
+            -  name: 'Push changes'
+               run: |
+                    git push --force

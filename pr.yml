@@ -1,0 +1,48 @@
+#
+# GitHub Actions workflow.
+#
+# Perfoms the following actions on a pull request:
+# * Lint the code
+# * Run the tests
+# * Confirm the build runs
+#
+
+name: PR Checks
+
+on:
+    pull_request:
+    workflow_dispatch:
+    workflow_call:
+
+jobs:
+    pr_checks:
+        name: 'Pull Request Package'
+        if: ${{ !contains(github.event.head_commit.message, '#skip-pr') }}
+        runs-on: ubuntu-latest
+        env: 
+            SCRAPINGBEE_API_KEY: 'abc'
+            SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+        steps:
+
+            -   name: 'Checkout'
+                uses: actions/checkout@v4
+                with:
+                    token: ${{ secrets.GH_PAT_TOKEN }}
+
+            -   name: Install Node.js
+                uses: actions/setup-node@v3
+                with:
+                    node-version: 24
+
+            - name: Install dependencies
+              run: npm install
+
+            -   name: Lint
+                run: npm run lint
+
+            -   name: Test
+                run: npm run test
+
+            -  name: Build
+               run: npm run build

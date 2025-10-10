@@ -1,0 +1,57 @@
+name: 'Release Package'
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+
+    pr_checks:
+        uses: ../pr.yml@main
+        secrets: inherit
+
+    version: 
+        name: 'Read Version'
+        needs: pr_checks
+        if: ${{ !contains(github.event.head_commit.message, '#skip-bump') }}
+        uses: ../read-version.yml@main
+        secrets: inherit
+
+    bump:
+        name: 'Bump Version'
+        needs: pr_checks
+        if: ${{ !contains(github.event.head_commit.message, '#skip-bump') }}
+        uses: ../bump.yml@main
+        with:
+            commit_message: ${{ github.event.head_commit.message }}
+        secrets: inherit
+               
+    docker-publish:
+        name: 'Docker Publish'
+        needs:
+            - pr_checks
+            - bump
+        if: ${{ !contains(github.event.head_commit.message, '#skip-docker') }}
+        uses: ../docker-publish.yml@main
+        with:
+            newTag: ${{ needs.bump.outputs.newTag }}
+            imageName: 'helpful-github-actions'
+            dockerfilePath: './Dockerfile.prod'
+        secrets: inherit
+
+
+    deploy:
+        name: 'Deploy to Elestio'
+        if: ${{ !contains(github.event.head_commit.message, '#skip-deploy') }}
+        needs: 
+            - docker-publish
+            - version
+            - bump
+        uses: ../elestio-deploy.yml@main
+        with:
+            commit_message: ${{ github.event.head_commit.message }}
+            packageVersion: ${{ needs.version.outputs.version }}
+            newTag: ${{ needs.bump.outputs.newTag }}
+        secrets: inherit

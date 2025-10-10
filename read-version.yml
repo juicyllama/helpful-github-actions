@@ -1,0 +1,22 @@
+name: 'Read Package Version'
+
+on:
+    workflow_call:
+        outputs:
+            version:
+                description: "The version from package.json"
+                value: ${{ jobs.read.outputs.version }}
+
+jobs:
+    read:
+        name: 'Read Version'
+        runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.read_package_version.outputs.version }}
+        steps:
+            -   name: 'Checkout'
+                uses: actions/checkout@v4
+            
+            -   name: Read version from package.json
+                id: read_package_version
+                run: echo "version=v$(jq -r .version package.json)" >> $GITHUB_OUTPUT
