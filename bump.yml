@@ -1,21 +1,43 @@
 # .github/workflows/bump.yml
 
+#######################################################
+# Version Bump Workflow
+#
+# This workflow bumps the version of a project, optionally within a specified folder.
+# It can be triggered manually or called from other workflows.
+# It supports skipping the bump process based on commit messages.
+# It requires a GitHub Personal Access Token (GH_PAT_TOKEN) with repo permissions.
+#######################################################
+
 name: 'Version Bump'
 
 on:
+    workflow_dispatch:
+        inputs:
+            commit_message:
+                description: 'The commit message to check for skip directives'
+                required: true
+                type: string
+                default: 'Manual version bump'
+            folder:
+                description: 'Folder to bump version in (optional)'
+                required: false
+                type: string
+
     workflow_call:
         inputs:
             commit_message:
                 description: 'The commit message to check for skip directives'
                 required: true
                 type: string
+            folder:
+                description: 'Folder to bump version in (optional)'
+                required: false
+                type: string
         outputs:
             newTag:
                 description: "The new version tag"
                 value: ${{ jobs.bump.outputs.newTag }}
-        secrets:
-            GH_CI_CD_RELEASE:
-                required: true
 
 jobs:
     bump:
@@ -23,32 +45,75 @@ jobs:
         runs-on: ubuntu-latest
         if: ${{ !contains(inputs.commit_message, '#skip-bump') }}
         outputs:
-            newTag: ${{ steps.version.outputs.newTag }}
+            newTag: ${{ steps.version-folder.outputs.newTag || steps.version-root.outputs.newTag }}
         steps:
+
+            -   name: 'Setup Git Auth'
+                run: |
+                    git config --global user.name "github-actions[bot]"
+                    git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
             -   name: 'Checkout'
                 uses: actions/checkout@v4
                 with:
                     # This is required to allow the bump action to push the new tag
                     # and commit back to the repository.
                     token: ${{ secrets.GH_PAT_TOKEN }}
-                    fetch-depth: 0 #
+                    fetch-depth: 0
+                    persist-credentials: true
             
-            -   name: 'Version Bump'
-               
-                id: version
+            -   name: 'Check Token and Fallback'
+                run: |
+                    echo "Testing GH_PAT token..."
+                    if curl -s -f -H "Authorization: token $GH_PAT" https://api.github.com/user > /dev/null; then
+                        echo "✅ GH_PAT token is valid"
+                        echo "AUTH_TOKEN=$GH_PAT" >> $GITHUB_ENV
+                    else
+                        echo "❌ GH_PAT token is invalid, falling back to GITHUB_TOKEN"
+                        echo "AUTH_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
+                        
+                        # Test GITHUB_TOKEN
+                        if curl -s -f -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user > /dev/null; then
+                            echo "✅ GITHUB_TOKEN is valid"
+                        else
+                            echo "❌ GITHUB_TOKEN is also invalid"
+                        fi
+                    fi
+                env:
+                    GH_PAT: ${{ secrets.GH_PAT }}
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+            -   name: 'Version Bump (with folder)'
+                if: ${{ inputs.folder }}
+                id: version-folder
                 uses: phips28/gh-action-bump-version@master
                 env:
-                    GITHUB_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
+                    PACKAGEJSON_DIR: ${{ inputs.folder }}
                 with:
                     major-wording: 'major,breaking'
                     minor-wording: 'feature,feat'
                     patch-wording: 'patch,fixes,fix,misc,docs,refactor'
-                    commit-message: 'Release Package: Bump Version [skip ci]'
+                    commit-message: ${{ format('[{0}] Bump Version to {{{{version}}}} [skip ci]', inputs.folder) }}
                     skip-tag: false
+                    skip-push: true
+
+            -   name: 'Version Bump (root)'
+                if: ${{ !inputs.folder }}
+                id: version-root
+                uses: phips28/gh-action-bump-version@master
+                with:
+                    major-wording: 'major,breaking'
+                    minor-wording: 'feature,feat'
+                    patch-wording: 'patch,fixes,fix,misc,docs,refactor'
+                    commit-message: 'Bump Version to {{version}} [skip ci]'
+                    skip-tag: false
+                    skip-push: true
 
             -   name: 'Show new version'
-                run: echo "New version is ${{ steps.version.outputs.newTag }}"
+                run: echo "New version is ${{ steps.version-folder.outputs.newTag || steps.version-root.outputs.newTag }}"
 
             -  name: 'Push changes'
                run: |
-                    git push --force
+                    git push https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }}
+                    git push https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.git --tags
