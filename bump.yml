@@ -64,12 +64,12 @@ jobs:
             
             -   name: 'Check Token and Fallback'
                 run: |
-                    echo "Testing GH_PAT token..."
-                    if curl -s -f -H "Authorization: token $GH_PAT" https://api.github.com/user > /dev/null; then
+                    echo "Testing GH_PAT_TOKEN token..."
+                    if curl -s -f -H "Authorization: token $GH_PAT_TOKEN" https://api.github.com/user > /dev/null; then
                         echo "✅ GH_PAT token is valid"
-                        echo "AUTH_TOKEN=$GH_PAT" >> $GITHUB_ENV
+                        echo "AUTH_TOKEN=$GH_PAT_TOKEN" >> $GITHUB_ENV
                     else
-                        echo "❌ GH_PAT token is invalid, falling back to GITHUB_TOKEN"
+                        echo "❌ GH_PAT_TOKEN token is invalid, falling back to GITHUB_TOKEN"
                         echo "AUTH_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
                         
                         # Test GITHUB_TOKEN
@@ -80,7 +80,7 @@ jobs:
                         fi
                     fi
                 env:
-                    GH_PAT: ${{ secrets.GH_PAT }}
+                    GH_PAT_TOKEN: ${{ secrets.GH_PAT_TOKEN }}
                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
