@@ -40,7 +40,6 @@ jobs:
             -   name: 'Apply dynamic environment'
                 env:
                     DYNAMIC_ENV: ${{ github.event.inputs.env || '' }}
-                if: ${{ env.DYNAMIC_ENV != '' }}
                 run: |
                     cat <<'EOF' >> "$GITHUB_ENV"
                     $DYNAMIC_ENV
