@@ -12,7 +12,19 @@ name: PR Checks
 on:
     pull_request:
     workflow_dispatch:
+        inputs:
+            env:
+                description: 'Environment variables to export (KEY=VALUE per line)'
+                required: false
+                type: string
+                default: ''
     workflow_call:
+        inputs:
+            env:
+                description: 'Environment variables to export (KEY=VALUE per line)'
+                required: false
+                type: string
+                default: ''
 
 jobs:
     pr_checks:
@@ -27,13 +39,20 @@ jobs:
                 with:
                     token: ${{ secrets.GH_PAT_TOKEN }}
 
+            -   name: 'Load env from input'
+                if: ${{ inputs.env != '' }}
+                env:
+                    INPUT_ENV: ${{ inputs.env }}
+                run: |
+                    echo "$INPUT_ENV" | sed '/^[[:space:]]*#/d;/^[[:space:]]*$/d' >> "$GITHUB_ENV"
+
             -   name: Install Node.js
                 uses: actions/setup-node@v3
                 with:
                     node-version: 24
 
-            - name: Install dependencies
-              run: npm install
+            -   name: Install dependencies
+                run: npm install
 
             -   name: Lint
                 run: npm run lint
@@ -41,5 +60,5 @@ jobs:
             -   name: Test
                 run: npm run test
 
-            -  name: Build
-               run: npm run build
+            -   name: Build
+                run: npm run build
