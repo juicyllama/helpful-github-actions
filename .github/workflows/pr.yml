@@ -12,17 +12,7 @@ name: PR Checks
 on:
     pull_request:
     workflow_dispatch:
-        inputs:
-            env:
-                description: 'Newline-delimited KEY=VALUE env vars to export for the job'
-                required: false
-                type: string
     workflow_call:
-        inputs:
-            env:
-                description: 'Newline-delimited KEY=VALUE env vars to export for the job'
-                required: false
-                type: string
 
 jobs:
     pr_checks:
@@ -39,7 +29,7 @@ jobs:
 
             -   name: 'Apply dynamic environment'
                 env:
-                    DYNAMIC_ENV: ${{ github.event.inputs.env || '' }}
+                    DYNAMIC_ENV: ${{ secrets || '' }}
                 run: |
                     cat <<'EOF' >> "$GITHUB_ENV"
                     $DYNAMIC_ENV
