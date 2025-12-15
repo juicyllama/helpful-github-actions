@@ -6,15 +6,16 @@ on:
             - main
     workflow_dispatch:
 
+env: 
+    NODE_ENV: production
+    SCRAPINGBEE_API_KEY: ${{ secrets.SCRAPINGBEE_API_KEY }}
+    SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
 jobs:
 
     pr_checks:
         uses: ../pr.yml@main
         secrets: inherit
-        with:
-            env: |
-                SCRAPINGBEE_API_KEY=${{ secrets.SCRAPINGBEE_API_KEY }}
-                SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
 
     version: 
         name: 'Read Version'
