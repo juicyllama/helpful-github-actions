@@ -8,6 +8,13 @@ on:
 
 jobs:
 
+    env:
+        name: 'Setup Environment'
+        uses: juicyllama/helpful-github-actions/.github/workflows/env.yml@main
+        with:
+            env_file: '.env'
+        secrets: inherit
+
     pr_checks:
         uses: juicyllama/helpful-github-actions/.github/workflows/pr.yml@main
         secrets: inherit
