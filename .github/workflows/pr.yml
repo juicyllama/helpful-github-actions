@@ -12,21 +12,7 @@ name: PR Checks
 on:
     pull_request:
     workflow_dispatch:
-        inputs:
-            env:
-                description: 'Newline-delimited KEY=VALUE env vars to export for the job'
-                required: false
-                type: string
     workflow_call:
-        inputs:
-            env:
-                description: 'Newline-delimited KEY=VALUE env vars to export for the job'
-                required: false
-                type: string
-        secrets:
-            ENV:
-                description: 'Newline-delimited KEY=VALUE env vars to export for the job'
-                required: false
 
 jobs:
     pr_checks:
@@ -40,15 +26,6 @@ jobs:
                 uses: actions/checkout@v4
                 with:
                     token: ${{ secrets.GH_PAT_TOKEN }}
-
-            -   name: 'Apply dynamic environment'
-                env:
-                    DYNAMIC_ENV: ${{ inputs.env || github.event.inputs.env || secrets.ENV || '' }}
-                if: ${{ env.DYNAMIC_ENV != '' }}
-                run: |
-                    cat <<'EOF' >> "$GITHUB_ENV"
-                    $DYNAMIC_ENV
-                    EOF
 
             -   name: Install Node.js
                 uses: actions/setup-node@v3
