@@ -16,6 +16,8 @@ jobs:
     pr_checks:
         uses: ../pr.yml@main
         secrets: inherit
+        with:
+            env: ${{ secrets.ENV }}
 
     version: 
         name: 'Read Version'
