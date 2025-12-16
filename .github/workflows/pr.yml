@@ -27,6 +27,24 @@ jobs:
                 with:
                     token: ${{ secrets.GH_PAT_TOKEN }}
 
+            -   name: Export all inherited secrets to env
+                shell: bash
+                env:
+                    # Produces a JSON object of all available secrets for this run (empty on forked PRs).
+                    SECRETS_JSON: ${{ toJSON(secrets) }}
+                run: |
+                    if [[ -z "$SECRETS_JSON" || "$SECRETS_JSON" == "{}" ]]; then
+                        echo "No secrets available (forked PRs do not receive repository secrets)."
+                        exit 0
+                    fi
+
+                    echo "$SECRETS_JSON" \
+                      | jq -r 'to_entries[]
+                               | select(.key | test("^[A-Za-z_][A-Za-z0-9_]*$"))
+                               | "\(.key)=\(.value)"' >> "$GITHUB_ENV"
+
+                    echo "Exported secrets to env for this job."
+
             -   name: Install Node.js
                 uses: actions/setup-node@v3
                 with:
