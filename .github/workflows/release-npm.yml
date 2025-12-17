@@ -25,6 +25,9 @@ jobs:
                 with:
                     token: ${{ secrets.GH_PAT_TOKEN }}
 
+            -  name: 'Build'
+               run: npm run build
+
             -   name: 'Authenticate with NPM'
                 run: echo -e "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
 
