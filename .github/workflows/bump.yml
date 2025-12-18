@@ -23,6 +23,16 @@ on:
                 description: 'Folder to bump version in (optional)'
                 required: false
                 type: string
+            skip-tag:
+                description: 'Skip creating a git tag'
+                required: false
+                type: boolean
+                default: false
+            skip-push:
+                description: 'Skip pushing changes'
+                required: false
+                type: boolean
+                default: true
 
     workflow_call:
         inputs:
@@ -34,6 +44,16 @@ on:
                 description: 'Folder to bump version in (optional)'
                 required: false
                 type: string
+            skip-tag:
+                description: 'Skip creating a git tag'
+                required: false
+                type: boolean
+                default: false
+            skip-push:
+                description: 'Skip pushing changes'
+                required: false
+                type: boolean
+                default: true
         outputs:
             newTag:
                 description: "The new version tag"
@@ -95,8 +115,8 @@ jobs:
                     minor-wording: 'feature,feat'
                     patch-wording: 'patch,fixes,fix,misc,docs,refactor'
                     commit-message: ${{ format('[{0}] Bump Version to {{{{version}}}} [skip ci]', inputs.folder) }}
-                    skip-tag: false
-                    skip-push: true
+                    skip-tag: ${{ inputs['skip-tag'] }}
+                    skip-push: ${{ inputs['skip-push'] }}
 
             -   name: 'Version Bump (root)'
                 if: ${{ !inputs.folder }}
@@ -107,8 +127,8 @@ jobs:
                     minor-wording: 'feature,feat'
                     patch-wording: 'patch,fixes,fix,misc,docs,refactor'
                     commit-message: 'Bump Version to {{version}} [skip ci]'
-                    skip-tag: false
-                    skip-push: true
+                    skip-tag: ${{ inputs['skip-tag'] }}
+                    skip-push: ${{ inputs['skip-push'] }}
 
             -   name: 'Show new version'
                 run: echo "New version is ${{ steps.version-folder.outputs.newTag || steps.version-root.outputs.newTag }}"
