@@ -134,6 +134,7 @@ jobs:
                 run: echo "New version is ${{ steps.version-folder.outputs.newTag || steps.version-root.outputs.newTag }}"
 
             -  name: 'Push changes'
+               if: ${{ !inputs['skip-push'] }}
                run: |
                     git pull --rebase
                     git push https://x-access-token:${AUTH_TOKEN}@github.com/${{ github.repository }}.git HEAD:${{ github.ref_name }}
