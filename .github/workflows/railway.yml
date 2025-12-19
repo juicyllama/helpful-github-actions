@@ -1,0 +1,27 @@
+name: Deploy to Railway
+
+on:
+    workflow_dispatch:
+        inputs:
+            service_id:
+                description: 'The service you wish to deploy to'
+                required: true
+                type: string
+
+    workflow_call:
+        inputs:
+            service_id:
+                description: 'The service you wish to deploy to'
+                required: true
+                type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      SVC_ID:  ${{ inputs['service_id'] }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: railway up --service=${{ env.SVC_ID }}
