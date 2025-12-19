@@ -1,3 +1,6 @@
+# Instructions to deploy to Railway using GitHub Actions
+# https://blog.railway.com/p/github-actions
+
 name: Deploy to Railway
 
 on:
