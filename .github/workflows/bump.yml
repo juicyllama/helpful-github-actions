@@ -65,7 +65,7 @@ jobs:
         runs-on: ubuntu-latest
         if: ${{ !contains(inputs.commit_message, '#skip-bump') }}
         outputs:
-            newTag: ${{ steps.version-folder.outputs.newTag || steps.version-root.outputs.newTag }}
+            newTag: ${{ steps.version-bump.outputs.newTag }}
         steps:
 
             -   name: 'Setup Git Auth'
@@ -79,8 +79,12 @@ jobs:
                     # This is required to allow the bump action to push the new tag
                     # and commit back to the repository.
                     token: ${{ secrets.GH_PAT_TOKEN }}
-                    fetch-depth: 0
+                    fetch-depth: 1  # Shallow checkout for better performance
                     persist-credentials: true
+
+            -   name: 'Fetch tags'
+                run: |
+                    git fetch --tags --depth=1
             
             -   name: 'Check Token and Fallback'
                 run: |
@@ -104,34 +108,35 @@ jobs:
                     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-            -   name: 'Version Bump (with folder)'
-                if: ${{ inputs.folder }}
-                id: version-folder
-                uses: phips28/gh-action-bump-version@master
+            -   name: 'Version Bump'
+                id: version-bump
+                run: |
+                    node .github/scripts/bump-version.js "${{ inputs.commit_message }}" "${{ inputs.folder }}"
                 env:
-                    PACKAGEJSON_DIR: ${{ inputs.folder }}
-                with:
-                    major-wording: 'major,breaking'
-                    minor-wording: 'feature,feat'
-                    patch-wording: 'patch,fixes,fix,misc,docs,refactor'
-                    commit-message: ${{ format('[{0}] Bump Version to {{{{version}}}} [skip ci]', inputs.folder) }}
-                    skip-tag: ${{ inputs['skip-tag'] }}
-                    skip-push: true
+                    MAJOR_WORDING: 'major,breaking'
+                    MINOR_WORDING: 'feature,feat'
+                    PATCH_WORDING: 'patch,fixes,fix,misc,docs,refactor'
 
-            -   name: 'Version Bump (root)'
-                if: ${{ !inputs.folder }}
-                id: version-root
-                uses: phips28/gh-action-bump-version@master
-                with:
-                    major-wording: 'major,breaking'
-                    minor-wording: 'feature,feat'
-                    patch-wording: 'patch,fixes,fix,misc,docs,refactor'
-                    commit-message: 'Bump Version to {{version}} [skip ci]'
-                    skip-tag: ${{ inputs['skip-tag'] }}
-                    skip-push: true
+            -   name: 'Commit version bump'
+                run: |
+                    NEW_VERSION=$(cat $GITHUB_OUTPUT | grep newVersion | cut -d'=' -f2)
+                    if [ -n "${{ inputs.folder }}" ]; then
+                        COMMIT_MSG="[${{ inputs.folder }}] Bump Version to $NEW_VERSION [skip ci]"
+                        git add "${{ inputs.folder }}/package.json"
+                    else
+                        COMMIT_MSG="Bump Version to $NEW_VERSION [skip ci]"
+                        git add package.json
+                    fi
+                    git commit -m "$COMMIT_MSG"
+
+            -   name: 'Create tag'
+                if: ${{ !inputs['skip-tag'] }}
+                run: |
+                    NEW_TAG=$(cat $GITHUB_OUTPUT | grep newTag | cut -d'=' -f2)
+                    git tag "$NEW_TAG"
 
             -   name: 'Show new version'
-                run: echo "New version is ${{ steps.version-folder.outputs.newTag || steps.version-root.outputs.newTag }}"
+                run: echo "New version is ${{ steps.version-bump.outputs.newTag }}"
 
             -  name: 'Push changes'
                if: ${{ !inputs['skip-push'] }}
