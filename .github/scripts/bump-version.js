@@ -104,7 +104,8 @@ try {
         process.exit(1);
     }
 
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    const packageJsonRaw = fs.readFileSync(packageJsonPath, 'utf8');
+    const packageJson = JSON.parse(packageJsonRaw);
     const currentVersion = packageJson.version;
 
     if (!currentVersion) {
@@ -123,9 +124,17 @@ try {
     const newVersion = bumpVersion(currentVersion, bumpType);
     console.log(`✨ New version: ${newVersion}`);
 
-    // Update package.json
-    packageJson.version = newVersion;
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
+    // Update package.json while preserving existing formatting/spacing
+    const escapedCurrentVersion = currentVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const versionPattern = new RegExp(`(^\\s*"version"\\s*:\\s*")${escapedCurrentVersion}(")`, 'm');
+
+    if (!versionPattern.test(packageJsonRaw)) {
+        console.error('❌ Error: Could not locate version field text in package.json');
+        process.exit(1);
+    }
+
+    const updatedPackageJsonRaw = packageJsonRaw.replace(versionPattern, `$1${newVersion}$2`);
+    fs.writeFileSync(packageJsonPath, updatedPackageJsonRaw, 'utf8');
 
     console.log(`✅ Successfully bumped version to ${newVersion}`);
 
