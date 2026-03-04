@@ -35,6 +35,9 @@ on:
                 default: true
 
     workflow_call:
+        secrets:
+            GH_PAT_TOKEN:
+                required: false
         inputs:
             commit_message:
                 description: 'The commit message to check for skip directives'
